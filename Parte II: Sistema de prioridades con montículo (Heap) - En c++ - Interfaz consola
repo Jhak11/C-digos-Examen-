@@ -1,0 +1,211 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <stdexcept>
+
+using namespace std;
+
+// Clase Tarea
+class Tarea {
+public:
+    string descripcion;
+    int nivel_urgencia;     // 1 = más urgente, 10 = menos urgente
+
+    Tarea() {}
+    Tarea(string desc, int nu)
+        : descripcion(desc), nivel_urgencia(nu) {}
+};
+
+// Montículo mínimo para tareas
+class MonticuloMinimo {//implementada con vectores
+private:
+    vector<Tarea> datos;
+
+                            //hijo          //padre
+    bool mayorPrioridad(const Tarea& a, const Tarea& b) {
+        return a.nivel_urgencia < b.nivel_urgencia;//se usa para saber si debemos reorganizar
+    }
+    
+    //se asegura de que el elemento suba hasta su lugar correcto segun su prioridad
+    void reorganizarArriba(int i) {//indice del ultimo elemento agregado | en insercion
+        while (i > 0) {//si no es el primer elemento | iteramos hasta que i este sea mayor a su padre o llege a 0
+            int padre = (i - 1) / 2;//indice del padre del nodo actual | para comparar con el
+            if (mayorPrioridad(datos[i], datos[padre])) {//si i es menor a su padre
+                swap(datos[i], datos[padre]);//=>cambiamos valores - el padre siempre es el menor
+                i = padre;//asignamos para no perder el contacto con el dato con el que estamos trabajando
+            } else break;//si alguna vez el padre sea menor entonces dejamos de reorganizar hacia arriba | estamos subiendo con cada iteracion
+        }
+    }
+
+    //se usa despues de eliminar un elemento
+    //baja el nuevo elemento de la cabeza hasta que llegue a su lugar correcto
+    void reorganizarAbajo(int i) {//pasamos al padre
+        int n = datos.size();//tamanio del vector
+        while (true) {//en cada iter. obtenemos los hijos del nodo actual
+            int izq = 2 * i + 1;//hallamos al hijo izq
+            int der = 2 * i + 2;//hallamos al hijo der
+            int menor = i;//menor almacena al padre
+            //
+            if (izq < n && mayorPrioridad(datos[izq], datos[menor])) menor = izq;//si no se sale del vector y si hIzq es menor a menor
+            if (der < n && mayorPrioridad(datos[der], datos[menor])) menor = der;//si no se sale del vector y si hDer es menor a menor
+
+            if (menor != i) {//si entra en alguna de las anteriores condiciones
+                swap(datos[i], datos[menor]);
+                i = menor;
+            } else break;//si no entra en las anteriores 2 condiciones significa que no tiene hijos menores)
+        }
+    }
+
+public:
+    void insertar(const Tarea& t) {
+        datos.push_back(t);//insertamos al final del vector
+        reorganizarArriba(datos.size() - 1);//reorganizamos y pasamos el indice del nodo recien ingresado
+    }
+
+    bool estaVacio() const {
+        return datos.empty();
+    }
+
+    Tarea extraerMinimo() {//cuando extraigamos a la raiz | padre
+        if (estaVacio()) throw runtime_error("Heap vacío");//verificamos si esta vacio
+        Tarea min = datos[0];//obtenemos el elemento con la prioridad mas alta (quien tiene el valor de nivel de urgencia mas bajo)
+        datos[0] = datos.back();//asignamos a la cabeza el ultimo elemento del vector \ devuelve el ultimo elemento
+        datos.pop_back();//eliminamos el ultimo elemento
+
+        if (!datos.empty()) {
+            reorganizarAbajo(0);//llamamos a reorganizar abajo y baja a la nueva raiz a su posicion adecuada
+        }
+
+        return min;//retornamos min
+    }
+
+    void mostrar() const {//const: esta función no modifica el estado del objeto sobre el que se llama, se asegura de que solo imprima datos
+        if (estaVacio()) {
+            cout << "No hay tareas pendientes.\n";
+            return;
+        }
+        
+        cout << "Lista de tareas pendientes (ordenadas por prioridad):\n";
+        for (const Tarea& t : datos) {//datos vector de tareas
+            cout << "- " << t.descripcion << " - Urgencia: " << t.nivel_urgencia << "\n";
+        }
+        cout << endl;
+    }
+
+    int obtenerTamanio() const {
+        return datos.size();
+    }
+
+    // Método para obtener la tarea de mayor prioridad sin extraerla
+    Tarea verMinimo() const {
+        if (estaVacio()) throw runtime_error("Heap vacío");
+        return datos[0];
+    }
+};
+
+// Funciones para el sistema de tareas
+
+void agregarTarea(MonticuloMinimo& cola) {
+    string descripcion;
+    int urgencia;
+
+    cout << "\n=== AGREGAR NUEVA TAREA ===\n";
+    cout << "Descripción de la tarea: ";
+    cin.ignore();
+    getline(cin, descripcion);
+    cout << "Nivel de urgencia (1-10, donde 1 es más urgente): ";
+    cin >> urgencia;
+    
+    // Validar rango de urgencia
+    while (urgencia < 1 || urgencia > 10) {
+        cout << "Por favor ingrese un nivel de urgencia válido (1-10): ";
+        cin >> urgencia;
+    }
+
+    cola.insertar(Tarea(descripcion, urgencia));
+    cout << "Tarea agregada correctamente.\n";
+}
+
+void procesarTarea(MonticuloMinimo& cola, int& procesadas) {
+    if (cola.estaVacio()) {
+        cout << "\nNo hay tareas para procesar.\n";
+        return;
+    }
+    
+    Tarea t = cola.extraerMinimo();
+    cout << "\n=== PROCESANDO TAREA ===\n";
+    cout << "Tarea: " << t.descripcion << "\n";
+    cout << "Nivel de urgencia: " << t.nivel_urgencia << "\n";
+    cout << "Tarea completada exitosamente.\n";
+    
+    procesadas++;
+}
+
+void verSiguienteTarea(const MonticuloMinimo& cola) {
+    if (cola.estaVacio()) {
+        cout << "\nNo hay tareas pendientes.\n";
+        return;
+    }
+    
+    Tarea siguiente = cola.verMinimo();
+    cout << "\n=== PRÓXIMA TAREA A PROCESAR ===\n";
+    cout << "Tarea: " << siguiente.descripcion << "\n";
+    cout << "Nivel de urgencia: " << siguiente.nivel_urgencia << "\n";
+}
+
+void mostrarEstadisticas(const MonticuloMinimo& cola, int procesadas) {
+    cout << "\n=== ESTADÍSTICAS DEL SISTEMA ===\n";
+    cout << "Tareas procesadas: " << procesadas << "\n";
+    cout << "Tareas pendientes: " << cola.obtenerTamanio() << "\n";
+}
+
+void mostrarMenu() {
+    cout << "\n=== SISTEMA DE PRIORIZACIÓN DE TAREAS ===\n";
+    cout << "1. Agregar nueva tarea\n";
+    cout << "2. Ver todas las tareas pendientes\n";
+    cout << "3. Ver próxima tarea a procesar\n";
+    cout << "4. Procesar siguiente tarea\n";
+    cout << "5. Mostrar estadísticas\n";
+    cout << "0. Salir\n";
+    cout << "Seleccione una opción: ";
+}
+
+// Función principal
+int main() {
+    MonticuloMinimo colaTareas;
+    int opcion;
+    int tareasProceadas = 0;
+    cout << "Las tareas se procesan según su nivel de urgencia (1 = más urgente, 10 = menos urgente)\n";
+
+    do {
+        mostrarMenu();
+        cin >> opcion;
+
+        switch (opcion) {
+            case 1: 
+                agregarTarea(colaTareas); 
+                break;
+            case 2: 
+                cout << "\nTAREAS PENDIENTES\n";
+                colaTareas.mostrar(); 
+                break;
+            case 3: 
+                verSiguienteTarea(colaTareas); 
+                break;
+            case 4: 
+                procesarTarea(colaTareas, tareasProceadas); 
+                break;
+            case 5:
+                mostrarEstadisticas(colaTareas, tareasProceadas);
+                break;
+            case 0:
+                cout << "Saliendo...\n";
+                break;
+            default:
+                cout << "\nOpción inválida.\n";
+        }
+
+    } while (opcion != 0);
+
+    return 0;
+}
