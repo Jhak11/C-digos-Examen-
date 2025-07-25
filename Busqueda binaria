@@ -1,0 +1,46 @@
+#include <iostream>
+using namespace std;
+
+// Función de búsqueda binaria (requiere que el arreglo esté ordenado)
+
+int busquedaBinaria(int arreglo[], int n, int objetivo) {
+    
+    int izquierda = 0, derecha = n - 1;
+
+    while (izquierda <= derecha) {
+        
+        int medio = (izquierda + derecha) / 2;
+
+        if (arreglo[medio] == objetivo) {
+            
+            return medio; // Mejor caso: O(1) si está justo en el centro
+            
+        } else if (arreglo[medio] < objetivo) {
+            
+            izquierda = medio + 1;
+            
+        } else {
+            
+            derecha = medio - 1;
+            
+        }
+    }
+    return -1; // No encontrado -  peor caso 
+}
+
+int main() {
+    int datos[] = {5, 8, 12, 20, 25, 30}; 
+    
+    int tamaño = sizeof(datos) / sizeof(datos[0]);
+    
+    int objetivo = 25;
+
+    int indice = busquedaBinaria(datos, tamaño, objetivo);
+
+    if (indice != -1)
+        cout << "Elemento encontrado en el índice: " << indice << endl;
+    else
+        cout << "Elemento no encontrado." << endl;
+
+    return 0;
+}
