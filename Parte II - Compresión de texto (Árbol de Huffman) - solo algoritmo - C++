@@ -1,0 +1,169 @@
+#include <iostream>
+#include <string>
+#include <unordered_map>
+#include <queue>
+using namespace std;
+
+// Estructura para un nodo del árbol de Huffman
+struct NodoHuffman {
+    char caracter;
+    int frecuencia;
+    NodoHuffman* izquierdo;
+    NodoHuffman* derecho;
+
+    NodoHuffman(char c, int f) : caracter(c), frecuencia(f), izquierdo(nullptr), derecho(nullptr) {}
+};
+
+// Comparador para la cola de prioridad (mínima frecuencia tiene más prioridad)
+struct CompararFrecuencia {
+    bool operator()(NodoHuffman* a, NodoHuffman* b) {
+        return a->frecuencia > b->frecuencia;
+    }
+};
+
+// Función recursiva para asignar los códigos binarios a cada carácter
+
+//construye los codigos desde la raiz
+void asignarCodigos(NodoHuffman* nodo, const string& codigoActual, unordered_map<char, string>& codigos) {
+    //si el nodo es null detiene la recursion para esa rama
+    if (!nodo) return;
+
+    //verifica si el nodo es una hoja del arbol
+    //solo las hojas tienen caracteres validos
+    
+    //Un puntero a nullptr se comporta como falso
+    
+    if (!nodo->izquierdo && !nodo->derecho) {
+        //codigoActual es la ruta binaria desde la raíz hasta esa hoja
+        
+        codigos[nodo->caracter] = codigoActual;
+    }
+    
+        //aniade 0 al codigoactual-> significa el mov al lado izquierdo
+        //aniade 1 al codigoactual-> significa el mov al lado derecho
+    asignarCodigos(nodo->izquierdo, codigoActual + "0", codigos);
+    asignarCodigos(nodo->derecho, codigoActual + "1", codigos);
+    //codigoActual es la ruta binaria desde la raíz hasta esa hoja
+}
+
+
+/// ----------------------
+// Función principal que realiza la codificación Huffman de una cadena de texto
+///----------------------------
+
+
+string codificarTextoHuffman(const string& textoOriginal) {
+    // Paso 1: Calcular frecuencias
+    
+    //estructura tipo diccionario que va a almacenar el par clave valor
+    // valor = frecuencia o cantidad de veces que aparece la letra en la palabra
+    unordered_map<char, int> frecuencias;
+    
+    for (char caracter : textoOriginal) {//itera sobre la cadena
+        //cada caracter es un indice que contiene un entero
+        //como no se inicializo entonces la posicion de cada caracter es 0
+        //incrementamos cada vez que lleguemos a la mismo 'caracter'
+        frecuencias[caracter]++;
+    }
+
+    // Paso 2: Crear cola de prioridad con los nodos
+    
+    /*cola de prioridad
+    valor de priordad = frecuencia
+    min heap => menor valor mayor prioridad, caracter menos frecuente mas prioridad*/
+    
+    priority_queue<NodoHuffman*, vector<NodoHuffman*>, CompararFrecuencia>    cola;
+    
+    //<NodoHuffman* ... > = Los elementos de la cola son los punteros a nodos de Huffman
+    //<... vector<NodoHuffman*> ... > = Estructura interna donde se almacenan los elementos
+    //<...  CompararFrecuencia... > = es una estructura comparadora
+    
+    for (const auto& par : frecuencias) {// recorre cada par del mapa de frecuencias (caracter -> frecuencias)
+        // Por cada carácter, crea un nuevo nodo de Huffman  
+        //luego lo insertamos en la cola de prioridad
+        cola.push(new NodoHuffman(par.first, par.second));
+    }
+
+    // Paso 3: Construir el árbol de Huffman
+    while (cola.size() > 1) {// Mientras haya más de un nodo en la cola, tomar los dos con menor frecuencia,
+                            // fusionarlos en un nuevo nodo padre, e insertar el resultado nuevamente en la cola.
+
+        //variable puntero que apunta a tipo NodoHuffman
+        /*le asignamos el nodo con menor frecuencia o que esta a la cabeza de la cola 
+        al hijo izq y el 2do com menor frecuencia al hujo der*/
+        
+        NodoHuffman* izquierdo = cola.top(); cola.pop();
+        NodoHuffman* derecho = cola.top(); cola.pop();
+        
+        //puntero con el nombre padre al que le asignamos la direccion del nuevo NodoHuffman
+        //este nodo no tiene caracter es nulo (\0)
+        //su frecuencia es la suma de sus hijos
+        
+        NodoHuffman* padre = new NodoHuffman('\0', izquierdo->frecuencia + derecho->frecuencia);
+        //se asignan los hijos que creamos al padre
+        padre->izquierdo = izquierdo;
+        padre->derecho = derecho;
+        //se inserta el nuevo subarbol de nuevo en la cola de prioridad
+        cola.push(padre);
+    }
+    
+    //AL FINAL DEL BUCLE SIEMPRE VA HABER, EN LA COLA, UN SOLO NODO
+    //ESTE NODO TENDRA COMO HIJOS A LOS DEMAS NODOS 
+    //Y LOS UNICOS NODOS CON CARACTERES SERAN LAS HOJAS DE ESTE ARBOL
+    
+    
+    //un puntero para el unico nodo de la cola
+    //este nodo es la raiz del arbol de huffman
+    NodoHuffman* raiz = cola.top();
+
+    // Paso 4: Generar los códigos binarios
+    
+    //se crea un mapa/diccionario para guardar los codigos binarios de cada caracter 
+    //clave = es el caracter
+    //valor = es el codigo binarios de ese caracter
+    
+    /*un unordered_map puede almacenar tantos pares clave-valor 
+    como permita la memoria disponible del sistema.*/
+    unordered_map<char, string> codigosHuffman;
+    //Parametros
+    //raiz           -> nodo raiz del arbol/actual
+    //""             -> codigo acumulado/concatenado (empieza como vacio)
+    //codigosHuffman -> mapa donde se guardan los codigos finales 
+    asignarCodigos(raiz, "", codigosHuffman);
+    
+    //por si la palabra es de una solo caracter
+    if (codigosHuffman.size() == 1 && codigosHuffman.begin()->second == "") {
+        codigosHuffman[codigosHuffman.begin()->first] = "0"; // o "1"
+    }
+
+    // Paso 5: Codificar el texto
+    string textoCodificado = "";
+    //transformamos la representacion del texto a un formato codificado
+    for (char c : textoOriginal) {
+        //por medio de los caracteres/indices iremos concatenando con los codigos
+        textoCodificado += codigosHuffman[c];
+    }
+
+    // Mostrar resultados
+    cout << "\nTabla de códigos Huffman:\n";
+    for (const auto& par : codigosHuffman) {
+        cout << "'" << par.first << "' -> " << par.second << endl;
+    }
+
+    return textoCodificado;
+}
+
+
+
+int main() {
+    string texto;
+    cout << "Ingrese el texto a comprimir: ";
+    getline(cin, texto);
+
+    string resultadoCodificado = codificarTextoHuffman(texto);
+
+    cout << "\nTexto codificado:\n" << resultadoCodificado << endl;
+
+    return 0;
+}
+
