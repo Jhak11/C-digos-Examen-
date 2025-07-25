@@ -1,0 +1,69 @@
+#include <iostream>
+using namespace std;
+
+
+class Nodo {
+public:
+    int dato;
+    Nodo* siguiente;
+
+    Nodo(int valor) {
+        dato = valor;
+        siguiente = nullptr;
+    }
+};
+
+
+class ListaEnlazada {
+private:
+    Nodo* cabeza;
+
+public:
+    ListaEnlazada() {
+        cabeza = nullptr;
+    }
+
+    void insertar_inicio(int valor) {
+        Nodo* nuevo = new Nodo(valor);
+        nuevo->siguiente = cabeza;
+        cabeza = nuevo;
+    }
+    
+    void insertar_final(int valor) {
+        
+    Nodo* nuevo = new Nodo(valor);
+    
+    if (cabeza == nullptr) {
+        cabeza = nuevo;
+    } else {
+        Nodo* actual = cabeza;
+        while (actual->siguiente != nullptr) {
+            actual = actual->siguiente;
+        }
+        actual->siguiente = nuevo;
+    }
+}
+
+    void mostrar() {
+        Nodo* actual = cabeza;// actual es un temporal
+        while (actual != nullptr) {
+            cout << actual->dato << " -> ";
+            actual = actual->siguiente;
+        }
+        cout << "NULL" << endl;
+    }
+};
+
+int main()
+{
+    ListaEnlazada* l1 = new ListaEnlazada;
+    l1->insertar_inicio(10);
+    l1->insertar_inicio(13);
+    l1->insertar_inicio(17);
+    l1->insertar_final(9);
+    l1->insertar_final(7);
+    l1->insertar_final(-8);
+    l1->mostrar();
+
+    return 0;
+}
