@@ -1,0 +1,255 @@
+import sys
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+import heapq
+from collections import defaultdict, Counter
+
+class NodoHuffman:
+    def __init__(self, char, freq, left=None, right=None):
+        self.char = char
+        self.freq = freq
+        self.left = left
+        self.right = right
+    
+    def __lt__(self, other):
+        return self.freq < other.freq
+
+class ArbolWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.raiz = None
+        self.setMinimumSize(800, 400)
+        
+    def set_arbol(self, raiz):
+        self.raiz = raiz
+        self.update()
+    
+    def paintEvent(self, event):
+        if not self.raiz:
+            return
+            
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Calcular posiciones de nodos
+        positions = {}
+        self._calcular_posiciones(self.raiz, self.width()//2, 50, self.width()//4, positions)
+        
+        # Dibujar conexiones
+        painter.setPen(QPen(Qt.black, 2))
+        self._dibujar_conexiones(painter, self.raiz, positions)
+        
+        # Dibujar nodos
+        self._dibujar_nodos(painter, self.raiz, positions)
+    
+    def _calcular_posiciones(self, nodo, x, y, dx, positions):
+        if not nodo:
+            return
+        
+        positions[nodo] = (x, y)
+        if nodo.left:
+            self._calcular_posiciones(nodo.left, x - dx, y + 80, dx//2, positions)
+        if nodo.right:
+            self._calcular_posiciones(nodo.right, x + dx, y + 80, dx//2, positions)
+    
+    def _dibujar_conexiones(self, painter, nodo, positions):
+        if not nodo:
+            return
+            
+        x, y = positions[nodo]
+        if nodo.left:
+            lx, ly = positions[nodo.left]
+            painter.drawLine(x, y, lx, ly)
+            # Etiqueta "0"
+            mx, my = (x + lx)//2, (y + ly)//2
+            painter.drawText(mx - 10, my - 5, "0")
+            self._dibujar_conexiones(painter, nodo.left, positions)
+            
+        if nodo.right:
+            rx, ry = positions[nodo.right]
+            painter.drawLine(x, y, rx, ry)
+            # Etiqueta "1"
+            mx, my = (x + rx)//2, (y + ry)//2
+            painter.drawText(mx + 5, my - 5, "1")
+            self._dibujar_conexiones(painter, nodo.right, positions)
+    
+    def _dibujar_nodos(self, painter, nodo, positions):
+        if not nodo:
+            return
+            
+        x, y = positions[nodo]
+        radio = 25
+        
+        # Color del nodo
+        if nodo.char:  # Nodo hoja
+            painter.setBrush(QBrush(QColor(144, 238, 144)))
+        else:  # Nodo interno
+            painter.setBrush(QBrush(QColor(173, 216, 230)))
+        
+        painter.setPen(QPen(Qt.black, 2))
+        painter.drawEllipse(x - radio, y - radio, 2 * radio, 2 * radio)
+        
+        # Texto del nodo
+        painter.setPen(QPen(Qt.black))
+        font = painter.font()
+        font.setPointSize(10)
+        painter.setFont(font)
+        
+        if nodo.char and nodo.char != '\0':
+            text = f"'{nodo.char}'\n{nodo.freq}"
+        else:
+            text = str(nodo.freq)
+        
+        painter.drawText(x - radio + 5, y - 5, text)
+        
+        self._dibujar_nodos(painter, nodo.left, positions)
+        self._dibujar_nodos(painter, nodo.right, positions)
+
+class HuffmanApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+        
+    def initUI(self):
+        self.setWindowTitle('Codificación Huffman')
+        self.setGeometry(100, 100, 1200, 800)
+        
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        
+        layout = QVBoxLayout(central_widget)
+        
+        # Input de texto
+        input_layout = QHBoxLayout()
+        input_layout.addWidget(QLabel("Texto:"))
+        self.text_input = QLineEdit()
+        self.text_input.setPlaceholderText("Ingrese el texto a codificar...")
+        input_layout.addWidget(self.text_input)
+        
+        self.encode_btn = QPushButton("Codificar")
+        self.encode_btn.clicked.connect(self.codificar)
+        input_layout.addWidget(self.encode_btn)
+        
+        layout.addLayout(input_layout)
+        
+        # Layout horizontal para tabla y árbol
+        main_layout = QHBoxLayout()
+        
+        # Panel izquierdo - Tabla de frecuencias
+        left_panel = QVBoxLayout()
+        left_panel.addWidget(QLabel("Tabla de Frecuencias:"))
+        
+        self.freq_table = QTableWidget()
+        self.freq_table.setColumnCount(2)
+        self.freq_table.setHorizontalHeaderLabels(['Carácter', 'Frecuencia'])
+        self.freq_table.setMaximumWidth(300)
+        self.freq_table.setMinimumHeight(300)
+        left_panel.addWidget(self.freq_table)
+        
+        # Tabla de códigos
+        left_panel.addWidget(QLabel("Códigos Huffman:"))
+        self.codes_table = QTableWidget()
+        self.codes_table.setColumnCount(2)
+        self.codes_table.setHorizontalHeaderLabels(['Carácter', 'Código'])
+        self.codes_table.setMaximumWidth(300)
+        self.codes_table.setMinimumHeight(300)
+        left_panel.addWidget(self.codes_table)
+        
+        main_layout.addLayout(left_panel)
+        
+        # Panel derecho - Árbol
+        right_panel = QVBoxLayout()
+        right_panel.addWidget(QLabel("Árbol de Huffman:"))
+        
+        self.tree_widget = ArbolWidget()
+        scroll_area = QScrollArea()
+        scroll_area.setWidget(self.tree_widget)
+        scroll_area.setWidgetResizable(True)
+        right_panel.addWidget(scroll_area)
+        
+        main_layout.addLayout(right_panel)
+        layout.addLayout(main_layout)
+        
+        # Resultado codificado
+        layout.addWidget(QLabel("Texto Codificado:"))
+        self.result_text = QTextEdit()
+        self.result_text.setMaximumHeight(100)
+        self.result_text.setReadOnly(True)
+        layout.addWidget(self.result_text)
+        
+    def construir_arbol_huffman(self, frecuencias):
+        heap = [NodoHuffman(char, freq) for char, freq in frecuencias.items()]
+        heapq.heapify(heap)
+        
+        while len(heap) > 1:
+            left = heapq.heappop(heap)
+            right = heapq.heappop(heap)
+            merged = NodoHuffman('\0', left.freq + right.freq, left, right)
+            heapq.heappush(heap, merged)
+        
+        return heap[0] if heap else None
+    
+    def generar_codigos(self, raiz):
+        if not raiz:
+            return {}
+        
+        codes = {}
+        
+        def asignar_codigos(nodo, codigo):
+            if nodo.char != '\0':  # Nodo hoja
+                codes[nodo.char] = codigo if codigo else "0"
+                return
+            if nodo.left:
+                asignar_codigos(nodo.left, codigo + "0")
+            if nodo.right:
+                asignar_codigos(nodo.right, codigo + "1")
+        
+        asignar_codigos(raiz, "")
+        return codes
+    
+    def codificar(self):
+        texto = self.text_input.text()
+        if not texto:
+            QMessageBox.warning(self, "Advertencia", "Ingrese un texto para codificar")
+            return
+        
+        # Calcular frecuencias
+        frecuencias = Counter(texto)
+        
+        # Llenar tabla de frecuencias
+        self.freq_table.setRowCount(len(frecuencias))
+        for i, (char, freq) in enumerate(frecuencias.items()):
+            self.freq_table.setItem(i, 0, QTableWidgetItem(repr(char)))
+            self.freq_table.setItem(i, 1, QTableWidgetItem(str(freq)))
+        
+        # Construir árbol
+        raiz = self.construir_arbol_huffman(frecuencias)
+        self.tree_widget.set_arbol(raiz)
+        
+        # Generar códigos
+        codigos = self.generar_codigos(raiz)
+        
+        # Llenar tabla de códigos
+        self.codes_table.setRowCount(len(codigos))
+        for i, (char, code) in enumerate(codigos.items()):
+            self.codes_table.setItem(i, 0, QTableWidgetItem(repr(char)))
+            self.codes_table.setItem(i, 1, QTableWidgetItem(code))
+        
+        # Texto codificado
+        texto_codificado = ''.join(codigos[char] for char in texto)
+        self.result_text.setText(texto_codificado)
+        
+        # Información adicional
+        original_bits = len(texto) * 8
+        compressed_bits = len(texto_codificado)
+        ratio = (1 - compressed_bits / original_bits) * 100 if original_bits > 0 else 0
+        
+        info = f"\nBits originales: {original_bits}\nBits comprimidos: {compressed_bits}\nCompresión: {ratio:.1f}%"
+        self.result_text.append(info)
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    window = HuffmanApp()
+    window.show()
+    sys.exit(app.exec_())
