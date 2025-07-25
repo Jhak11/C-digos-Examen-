@@ -1,0 +1,149 @@
+#include <iostream>
+#include <list>
+#include <string>
+using namespace std;
+
+/**ENCADENAMIENTO IMPLEMENTADO/
+
+/*
+--
+[tipo de dato almacenado] <arreglo> [tamanio del arreglo]
+--
+
+list<pair<string, int>> table[TABLE_SIZE]; 
+Es un arreglo de listas donde cada lista contiene pares (string,int)
+
+[tipo de dato almacenado]-> list<pair<string, int>> = Una lista de pares ('nombre', nota)
+<arreglo> -> table
+tamano del arreglo -> TABLE_SIZE
+*/
+
+class HashTable {
+private:
+    static const int TABLE_SIZE = 10; // la tabla tiene 10 posisiones
+     // Array de listas (encadenamiento), donde cada lista tiene varios pares <nombre, nota>
+     // Ya que la estructura es de esta foma nos permite alamcenar varios elementos con el mismo indice (solucionamos la colision)
+   
+    list<pair<string, int>> table[TABLE_SIZE]; 
+
+    /*Esta funcion convierte un nombre(key) en un indice de entre 0 y  9*/
+    int hashFunction(string key) {
+        int hash = 0;
+        for (char c : key) {
+            hash += int(c);//suma caracteres assci
+        }
+        return hash % TABLE_SIZE;//obtenemos un residuo de 10, es decir entre 0 y 9
+        
+        //ejem. -> "Ana" → ASCII(65 + 110 + 97) = 272 → 272 % 10 = 2.
+    }
+
+public:
+    void insertar(string nombre, int nota) {
+        int index = hashFunction(nombre);// calculamos el indice de acuerdo al nombre
+        // Verificar si ya existe y reemplazar
+        for (auto& elemento : table[index]) {// buscamos si el nombre esta en la lista del indice 
+            if (elemento.first == nombre) {
+                elemento.second = nota;//actualizamos
+                return;
+            }
+        }
+        // Si no existe, insertar nuevo par
+        table[index].push_back({nombre, nota});//agregamos
+    }
+
+    //busca en la lista del indice correspondiente
+    /*cada indice de la tabla contiene una lista de pares, la tabla tiene 10 indices*/
+    int buscar(string nombre) {
+        int index = hashFunction(nombre);
+        for (const auto& elemento : table[index]) {
+            if (elemento.first == nombre) {
+                return elemento.second;
+            }
+        }
+        return -1;  // No encontrado
+    }
+
+    //buscamos en la lista del indice si lo encuentra lo borra
+    void eliminar(string nombre) {
+        int index = hashFunction(nombre);
+        for (auto it = table[index].begin(); it != table[index].end(); ++it) {
+            if (it->first == nombre) {
+                table[index].erase(it);
+                return;
+            }
+        }
+    }
+    /*Recorre todos los índices de la tabla hash.
+    
+    Imprime todos los elementos almacenados en cada lista (cubeta).*/
+    void mostrar() {
+        for (int i = 0; i < TABLE_SIZE; i++) {
+            cout << "Índice " << i << ": ";
+            for (auto& elemento : table[i]) {
+                cout << "[" << elemento.first << ", " << elemento.second << "] -> ";
+            }
+            cout << "NULL\n";
+        }
+    }
+};
+
+int main() {
+    HashTable tabla;
+    int opcion;
+    string nombre;
+    int nota;
+
+    do {
+        cout << "\n===== MENÚ - Tabla Hash de Estudiantes =====\n";
+        cout << "1. Insertar estudiante\n";
+        cout << "2. Buscar nota por nombre\n";
+        cout << "3. Eliminar estudiante\n";
+        cout << "4. Mostrar tabla completa\n";
+        cout << "5. Salir\n";
+        cout << "Seleccione una opción: ";
+        cin >> opcion;
+
+        switch (opcion) {
+            case 1:
+                cout << "Ingrese el nombre del estudiante(solo un nombre si espaciooos): ";
+                cin >> nombre;
+                cout << "Ingrese la nota: ";
+                cin >> nota;
+                tabla.insertar(nombre, nota);
+                cout << "Estudiante insertado correctamente.\n";
+                break;
+
+            case 2:
+                cout << "Ingrese el nombre del estudiante a buscar: ";
+                cin >> nombre;
+                nota = tabla.buscar(nombre);
+                if (nota != -1) {
+                    cout << "Nota de " << nombre << ": " << nota << "\n";
+                } else {
+                    cout << "Estudiante no encontrado.\n";
+                }
+                break;
+
+            case 3:
+                cout << "Ingrese el nombre del estudiante a eliminar: ";
+                cin >> nombre;
+                tabla.eliminar(nombre);
+                cout << "Si el estudiante existía, fue eliminado.\n";
+                break;
+
+            case 4:
+                cout << "Contenido de la tabla hash:\n";
+                tabla.mostrar();
+                break;
+
+            case 5:
+                cout << "Saliendo del programa.\n";
+                break;
+
+            default:
+                cout << "Opción no válida. Intente de nuevo.\n";
+        }
+    } while (opcion != 5);
+
+    return 0;
+}
