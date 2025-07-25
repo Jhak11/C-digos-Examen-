@@ -1,0 +1,134 @@
+#include <iostream> 
+#include <vector>
+#include <queue>
+#include <cstdlib>
+#include <ctime>
+#include <climits>
+using namespace std;
+
+using Arista = pair<int, int>;
+//rand() si no cambiamos de semilla nos genera numeros pseudoaleatorios, es decir, siempre nos da los mismo nros en cada ejecucion
+// la semilla es el numero base que inicia el algoritmo para la generacion de numeros aleatorios
+//el algoritmo toma esta semilla y realiza opraciones matematicas en base a ella para generar los nros aleatorios
+//entonces para generar numeros aleatorios en cada ejecucion se tiene que cambiar la semilla
+
+vector<string> nombresCiudades = {
+    "Lima", "Arequipa", "Cusco", "Trujillo", "Chiclayo", "Piura", "Iquitos", "Tacna", "Puno", "Huancayo",
+    "Ayacucho", "Tumbes", "Ica", "Moquegua", "Cajamarca", "Chimbote", "Tarapoto", "Huaraz", "Abancay", "Puerto Maldonado"
+};
+
+vector<vector<Arista>> generarGrafo(int n) {//Listas de Adyacencia (listas de listas)
+    vector<vector<Arista>> grafo(n);//definimos el nro de nodos
+    srand(time(0));//El número de segundos desde el 1 de enero de 1970
+
+    for (int i = 0; i < n; ++i) {//i son los nodos o indices
+        int conexiones = 2 + rand() % 2; //conexione para un nodo max 3
+
+        for (int j = 0; j < conexiones; ++j) {//como maximo 3 iteraciones
+            int destino = rand() % n;//el destino tiene que ser uno de los nodos/ hasta n-1 nodos
+
+            while (destino == i) destino = rand() % n;//si el destino es nuestro mismo nodo entonces recalculamos destino
+
+            int peso = 5 + rand() % 26;//cada peso solo hasta 30
+            //los indice son los nombres de los nodos
+            //agregamos un nuevo elemento al final del vector de la posicion i
+            grafo[i].push_back({destino, peso});//ingresamos un par (Arista)
+        }
+    }
+    //retornamos la Lista de Adyacencia
+    return grafo;
+}
+
+//las colas de prioridad por defecto utilizan a first de un par como el valor de prioridad de sus elementos entones {dist[], indice}
+
+vector<int> dijkstra(const vector<vector<Arista>>& grafo, int origen) {//pasamos a dikstra un grafo y nodo de origen
+    //inicializamos n como el tamano del grafo
+    int n = grafo.size();
+    //vector para guardar las Distancias
+    //n - es el tamano del vector 
+    //INT_MAX es el valor maximo que puede tomar un entero, y con este valor inicializamos a los n elementos del vector
+    vector<int> dist(n, INT_MAX);
+    //cola de prioridad de comportamiento minHeap(especificado con greater) y con el nombre minHeap | por defecto las colas de prioridad son un maxHeap
+    priority_queue<Arista, vector<Arista>, greater<Arista>> minHeap;//declaramos la cola (tipo, estructura, comportamiento, nombre)
+    //minheap almacena objetos del tipo Arista
+    //el origen lo inicializamos como cero
+    dist[origen] = 0;
+    
+    //introduciomos el primer valor, la distacia del nodo de origen al nodo de origen
+    minHeap.push({0, origen});
+
+    // mientras la cola aun este llena continua
+    /*NT: la cola de prioridad en el algoritmo de dijsktra nos ayuda a elegir
+    de manera eficiente el nodo con el menor peso a nuestro nodo de origen, es decir, 
+    tendra un comportamiento minHeap (esto se puede implementar con ABB Y Montones,
+    donde la prioridad del nodo padre sea siempre menor o igual a los hijos)*/
+    while (!minHeap.empty()) {
+        int u = minHeap.top().second;//obtenemos el nodo destino del top de la cola
+        int d_u = minHeap.top().first;//obtenemos el peso hacia ese nodo 
+        //en resumen obtenemos {peso, destino}
+        minHeap.pop();//y eliminamos el elemento de la cola
+        
+        //si la distancia es v(nodo oriden) a u es mayor a la registrada en nuestra estructura  descartamos =>
+        if (d_u > dist[u]) continue;//continua, salta el resto del cuerpo del bucle y pasa al siguiente nodo de la cola.
+
+        //revisamos las conexiones salientes del nodo actual
+        for (const auto& arista : grafo[u]) {//grafo{u} tiene 10,100 o 1000 elementos hacemos un for each a cada elemento - son conexiones que tiene el grafo
+            int v = arista.first;//de la lista del nodo de origen sacamos la 1ra conexion a v u de pesp "peso"
+            int peso = arista.second;
+            
+            //sumamos dist minima a u y la dist de u a nuestro actual nodo (v) para comporar con la distancia minima hasta v registrada
+            if (dist[u] + peso < dist[v]) {
+                dist[v] = dist[u] + peso;//si es menor le actualizamos la menor distancia a v en nuestra estrcutura
+                minHeap.push({dist[v], v});// he introducimos el nuevo menor peso a v y v a la cola, terminamos insertando valores a cola de prioridad de todas las distancias a un nodod vecion  
+            }
+        }
+    }
+
+    return dist;
+}
+
+void imprimirDistancias(const vector<int>& dist, int origen) {
+    cout << "Distancias mínimas desde " << nombresCiudades[origen] << ":\n";
+    for (int i = 0; i < dist.size(); ++i) {
+        if (dist[i] == INT_MAX)
+            cout << nombresCiudades[i] << ": Inaccesible\n";
+        else
+            cout << nombresCiudades[i] << ": " << dist[i] << " minutos\n";
+    }
+    cout << endl;
+}
+
+int main() {
+    int n;
+    cout << "Ingrese la cantidad de ciudades (máx 20): ";
+    cin >> n;
+    if (n > 20 || n <= 1) {
+        cout << "Número inválido. Debe ser entre 2 y 20.\n";
+        return 1;
+    }
+
+    cout << "\nCiudades disponibles:\n";
+    for (int i = 0; i < n; ++i) {
+        cout << i << " = " << nombresCiudades[i] << endl;
+    }
+
+    int origen, destino;
+    cout << "\nIngrese el número de la ciudad de origen: ";
+    cin >> origen;
+    cout << "Ingrese el número de la ciudad de destino: ";
+    cin >> destino;
+
+    auto grafo = generarGrafo(n);
+    auto distancias = dijkstra(grafo, origen);
+
+    cout << "\nRuta más corta desde " << nombresCiudades[origen] << " a " << nombresCiudades[destino] << ":\n";
+    if (distancias[destino] == INT_MAX)
+        cout << "No existe un camino accesible.\n";
+    else
+        cout << "Distancia: " << distancias[destino] << " minutos\n";
+
+    if (n <= 10)
+        imprimirDistancias(distancias, origen);
+
+    return 0;
+}
